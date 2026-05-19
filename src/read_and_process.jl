@@ -171,7 +171,7 @@ function process_waveform( waveform; CFD_threshold=0.2 )
         is_saturated = check_saturation( waveform )
 
         # calc baseline
-        baseline_width = 80 # samples
+        baseline_width = 59 # samples (1..60, stays well before pulse rising edge at ~sample 75)
         baseline_xmin = 1
         baseline_xmax = baseline_xmin + baseline_width
         baseline = calc_baseline( 
@@ -182,6 +182,7 @@ function process_waveform( waveform; CFD_threshold=0.2 )
 
         # subtract baseline
         waveform .-= baseline
+        waveform .*= -1     # flip negative-polarity (PMT) pulses to positive
 
         # calc baseline rms 
         baseline_rms = calc_baseline_rms( 
@@ -201,9 +202,11 @@ function process_waveform( waveform; CFD_threshold=0.2 )
             waveform, CFD_threshold )
         event_time = (k_start - 1)
 
-        # calculate charge integral of the pulse
-        # NB: could choose a more intelligent pulse start
-        x_min, x_max = 120, length(waveform)
+        # calculate charge integral of the pulse, window centered on peak
+        int_pre  = 10   # samples before peak
+        int_post = 40   # samples after peak
+        x_min = max(1, k - int_pre)
+        x_max = min(length(waveform), k + int_post)
         charge_integral = sum( waveform[x_min:x_max] )
 
         # calculate pre-pulse integral
